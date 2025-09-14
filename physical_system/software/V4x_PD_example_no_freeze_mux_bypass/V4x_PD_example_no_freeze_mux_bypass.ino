@@ -60,18 +60,18 @@
 #include "functions.h"
 
 // Control parameters
-constexpr float Kp = 200;
-constexpr float Kd = 0.9;
-constexpr float ALPHA = 0.2;
+constexpr float Kp = COIL_POL * 100;
+constexpr float Kd = COIL_POL * 0.5;
+constexpr float ALPHA = 0.3;
 constexpr float DALPHA = 0.2;
 
 // Sensor objects - one for each physical sensor
 TLx493D_A1B6 Sensors[NUM_SENSORS] = {TLx493D_A1B6(Wire, TLx493D_IIC_ADDR_A0_e)};
 
 // Timing parameters
-constexpr float sensorFrequency = 5000.0;
+constexpr float sensorFrequency = SENS_FREQUENCY; //default 5k, possibly incompatible with 100k I2C
 constexpr int sensorInterval = round(1e6 / sensorFrequency);
-constexpr float controlFrequency = 5000.0;
+constexpr float controlFrequency = CTRL_FREQUENCY; //default 5k
 constexpr int controlInterval = round(1e6 / controlFrequency);
 
 // Timing variables
@@ -149,8 +149,8 @@ void loop(){
   if(currentTime - prevControlTime >= (unsigned long)controlInterval){
     if(fabs(magFieldZ) > 5){
       // Calculate and apply control signals directly
-      pwmInputX = constrain(-Kp * magFieldX - Kd * dMagFieldX, -150, 150);
-      pwmInputY = constrain(-Kp * magFieldY - Kd * dMagFieldY, -150, 150);
+      pwmInputX = constrain(Kp * magFieldX + Kd * dMagFieldX, -150, 150);
+      pwmInputY = constrain(Kp * magFieldY + Kd * dMagFieldY, -150, 150);
     } else {
       // When magnet is too far, set control signals to zero
       pwmInputX = 0;

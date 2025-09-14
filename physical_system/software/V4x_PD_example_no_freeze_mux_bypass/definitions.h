@@ -27,5 +27,9 @@
 #define NUM_SENSORS 1
 extern const int SENSOR_CHANNELS[NUM_SENSORS];
 #define PRIMARY_SENSOR_INDEX 0
+#define I2C_FREQUENCY 400000
+#define SENS_FREQUENCY 5000
+#define CTRL_FREQUENCY 5000
+#define COIL_POL 1 //Positive if + is CCW
 
 #endif // DEFINITIONS_H

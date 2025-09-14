@@ -63,8 +63,8 @@
 const int SENSOR_CHANNELS[NUM_SENSORS] = {7}; // Sensor channel IDs on the multiplexer (also indicated on the PCB)
 
 // Control parameters
-constexpr float Kp = 150;
-constexpr float Kd = 0.8;
+constexpr float Kp = 150; //150
+constexpr float Kd = 0.8; //0.8
 constexpr float ALPHA = 0.3;
 constexpr float DALPHA = 0.2;
 
@@ -73,9 +73,9 @@ Tlv493d Sensors[NUM_SENSORS];
 TCA9548 mux_sensors(0x70);
 
 // Timing parameters
-constexpr float sensorFrequency = 5000.0;
+constexpr float sensorFrequency = 5000.0; //5000
 constexpr int sensorInterval = round(1e6 / sensorFrequency);
-constexpr float controlFrequency = 5000.0;
+constexpr float controlFrequency = 5000.0; //5000
 constexpr int controlInterval = round(1e6 / controlFrequency);
 
 // Timing variables

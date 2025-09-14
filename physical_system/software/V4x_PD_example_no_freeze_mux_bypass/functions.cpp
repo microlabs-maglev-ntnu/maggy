@@ -55,7 +55,7 @@ void initializeSensors() {
   
   // Initialize I2C communication
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock(I2C_FREQUENCY);
   delay(50);
   
   delay(10);
@@ -86,7 +86,7 @@ void initializeSensors() {
   
   // Reinitialize I2C after sensor setup to ensure stable communication
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock(I2C_FREQUENCY);
   delay(50);
 }
 
