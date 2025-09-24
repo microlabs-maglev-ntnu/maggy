@@ -166,6 +166,15 @@ void loop(){
     prevControlTime = currentTime;
 
     if(controlLoopCounter % 10 == 0){
+      Serial.print("ux:");
+      Serial.print(pwmInputX);
+      Serial.print(",uy:");
+      Serial.print(pwmInputY);
+      Serial.print(",top:");
+      Serial.print(160);
+      Serial.print(",bottom:");
+      Serial.print(-160);
+      Serial.print(',');
       logSystemState(currentTime, currentXPos, currentXNeg, currentYPos, currentYNeg);
     }
   }

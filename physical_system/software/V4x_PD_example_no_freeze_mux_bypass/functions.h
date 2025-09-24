@@ -6,7 +6,7 @@
 #include <TCA9548.h>
 #include "definitions.h"
 #include "TLx493D_inc.hpp"
-#include <Tlv493d.h>
+//#include <Tlv493d.h>
 using namespace ifx::tlx493d;
 
 // === External Variable Declarations ===

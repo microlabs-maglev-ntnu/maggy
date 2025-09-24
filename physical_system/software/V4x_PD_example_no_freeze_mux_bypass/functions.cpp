@@ -243,9 +243,9 @@ void logSystemState(unsigned long currentTime, float currentXPos, float currentX
   float timeSec = currentTime / 1000000.0;
   
   // Log time and solenoid currents first
-  Serial.print("time:");
-  Serial.print(timeSec, 6);
-  Serial.print(",Ix_plus:");
+  // Serial.print("time:"); //why time?? literally just an increasing line
+  // Serial.print(timeSec, 6);
+  Serial.print("Ix_plus:");
   Serial.print(currentXPos, 6);
   Serial.print(",Ix_minus:");
   Serial.print(currentXNeg, 6);
@@ -410,35 +410,51 @@ void calibrateDirectFeedthrough()
      *-------------------------------------------------*/
     for (int s = 0; s < NUM_SENSORS; ++s)
     {
+        Serial.print("Calibrating sensor number ");
+        Serial.println(s+1);
         for (int sol = 0; sol < 4; ++sol)
         {
-            if (counts[sol] == 0) continue;
-            const float Iavg = sumCurrent[sol] / counts[sol];
+          Serial.print("Calibration values for solenoid number ");
+          Serial.print(sol +1);
 
-            /* X axis – affected only by solenoids 0 and 1 */
-            if (sol < 2)
-            {
-                const float Sx = sumSensor[s][0][sol] / counts[sol];
-                const float k  = (Sx - meanMagField[s][0]) / Iavg;
-                feedthroughSlopeX[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -k;
-            }
+          if (counts[sol] == 0) continue;
+          const float Iavg = sumCurrent[sol] / counts[sol];
 
-            /* Y axis – affected only by solenoids 2 and 3 */
-            if (sol >= 2)
-            {
-                const float Sy = sumSensor[s][1][sol] / counts[sol];
-                const float k  = (Sy - meanMagField[s][1]) / Iavg;
-                feedthroughSlopeY[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -k;
-            }
+          /* X axis – affected only by solenoids 0 and 1 */
+          if (sol < 2)
+          {
+            const float Sx = sumSensor[s][0][sol] / counts[sol];
+            const float k  = (Sx - meanMagField[s][0]) / Iavg;
+            feedthroughSlopeX[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -k;
 
-            /* Z axis – affected by all solenoids */
-            const float Sz = sumSensor[s][2][sol] / counts[sol];
-            const float kZ = (Sz - meanMagField[s][2]) / Iavg;
+            Serial.print(": k = ");
+            Serial.print(k);
+          }
 
-            if (sol < 2)  // X coils’ impact on Z
-                feedthroughSlopeZX[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -kZ;
-            else          // Y coils’ impact on Z
-                feedthroughSlopeZY[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -kZ;
+          /* Y axis – affected only by solenoids 2 and 3 */
+          if (sol >= 2)
+          {
+            const float Sy = sumSensor[s][1][sol] / counts[sol];
+            const float k  = (Sy - meanMagField[s][1]) / Iavg;
+            feedthroughSlopeY[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -k;
+
+            Serial.print(": k = ");
+            Serial.print(k);
+          }
+
+          /* Z axis – affected by all solenoids */
+          const float Sz = sumSensor[s][2][sol] / counts[sol];
+          const float kZ = (Sz - meanMagField[s][2]) / Iavg;
+
+          if (sol < 2)  // X coils’ impact on Z
+            feedthroughSlopeZX[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -kZ;
+          else          // Y coils’ impact on Z
+            feedthroughSlopeZY[s][ solenoidConfigs[sol].isPositive ? 0 : 1 ] = -kZ;
+
+          Serial.print(", kZ = ");
+          Serial.println(kZ);
+
+
         }
     }
 
