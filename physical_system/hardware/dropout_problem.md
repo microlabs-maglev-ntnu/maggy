@@ -2,9 +2,9 @@ This document pertains to issues with Maggy V4.2, which as of December 2025 have
 
 ## INTRO
 Maggy V4.2 was intended for use in student lab exercises during the fall semester of 2025. However, most of the units were dysfunctional to some degree.
-The TLE493D hall effect sensor would experience frequent dropouts, making V4.2 hard or impossible to use. Significant work was put down to uncover the
-cause of the problem during the semester, resulting in a several suggested solutions to be implemented in V4.3. The solutions are outlined in the Issues
-section of this GitHub repository. This document gives context to the solutions, for the sake of posterity.
+The [TLV493D](https://www.infineon.com/part/TLV493D-A1B6) hall effect sensor would experience frequent dropouts, making V4.2 hard or impossible to use.
+Significant work was put down to uncover the cause of the problem during the semester, resulting in a several suggested solutions to be implemented 
+in V4.3. The solutions are outlined in the Issues section of this GitHub repository. This document gives context to the solutions, for the sake of posterity.
 
 ## THE PROBLEM
 **No data is received from the TLV493D-A2B6 hall effect sensor.**  
@@ -66,48 +66,72 @@ of a family of sensors. V2.7 had used TLE493D-W1B6, the more expensive "automoti
 Could The Problem stem from the sensors being underdimensioned for the noise associated with the solenoids?
 
 As W1B6 was no longer in production, three other models of the next generation were considered:
-* TLE493D-A2B6: Automotive version without unique addresses.
-* TLE493D-W2B6: Automotive version with unique addresses (up to 4 units per bus), direct successor of W1B6.
-* TLI493D-A2B6: Industrial version without unique addresses.
+* [TLE493D-A2B6](https://www.infineon.com/part/TLE493D-A2B6): Automotive version without unique addresses.
+* [TLE493D-W2B6](https://www.infineon.com/part/TLE493D-W2B6-A0): Automotive version with unique addresses (up to 4 units per bus), direct successor of W1B6.
+* [TLI493D-A2B6](https://www.infineon.com/part/TLI493D-A2B6): Industrial version without unique addresses.
 
 The greatest difference seems to be the price point, with TLI being only slightly more expensive than the original TLV. The datasheets did not
 give a clear indication that either sensor would be more or less noise resistant than TLV, but the sensor range is slightly larger for all of them at
-160mT vs 135mT for the TLV.
+160mT (vs 135mT for the TLV).
 
 The W2B6's option of having multiple units on the same bus makes it very attractive. The alternative is to reintroduce the multiplexer, which was
-in 4.1 on the suspicion that it caused The Problem, or only have one sensor, which is the case for 4.1 and 4.2.
+removed in V4.1 on the suspicion that it caused The Problem, or to only use one sensor, which is the case for V4.1 and V4.2.
 
-**Three units of each prospective replacement were installed in 9 Maggy 4.2 units.** Poor hand soldering was, unfortunately, a significant source of
+**Three units of each prospective replacement were installed in 9 Maggy V4.2 units.** Poor hand soldering was, unfortunately, a significant source of
 uncertainty in the next phase.
 
 
 ## SECOND DEBUGGING
 
+Two units which had been used for TTK4111 lab exercises, and one which had not, were resoldered with each of the new sensor types. In total, 9
+units were used in this second round of debugging. As before, no differences between the "good" and the "bad" units were observed.
+The elektromagnettest, sensortest and PD_v4x Arduino scripts were changed to accommodate the new sensors. This was simply a matter of changing
+the sensorType variable to refer to them, rather than the old sensor type.
+
+In brief, using the newer and more expensive sensors did not prove to be a silver bullet against The Problem. It changed characteristics somewhat,
+but persisted.
+
+* All new sensors seem to be somewhat more robust against FM2, but not FM1. FM2 now looks like the sensor responding to a READ request by sending
+  24 bytes of 0xFF, which the Arduino sensor library interprets as a failure to "read consistent data". This difference is assumed to be related
+  to the sensors being of the 2nd generation, but no wholehearted attempt was made to get to the bottom of it.
+* All sensors exhibited a variant of FM2, in which the Z axis freezes at -132.99 while the other axes keep transmitting. This corresponds to two
+  bytes of 0xFF towards the end of the I2C pulse train, consistent with the sensors' data sheets. Reflashing Maggy would occasionally fix the issue,
+  while resetting it (by pressing the button on the Teensy) would not. No particular trigger could be found.
+* The new sensors, in particular the TLI units, sometimes fail while running the sensortest script.
+
+This might seem bleak, but some new information has been gained:  
+=> The sensors are probably not the source of The Problem.  
+=> The software is easily adapted to new sensor types, should it become relevant in the future.  
+=> The TLE-W is almost certainly viable as a replacement (or rather, reinstatement), which good news for future MIMO applications.
+
+At this point, it seems almost certain that The Problem, or at least FM2, is caused by disruptions from back-emf bleeding into the I2C and/or 3V3 lines.
+The Issues opened in Q4 of 2025 reflect that conclusion, and largely concern strengthening the I2C bus and removing the 3V3 copper fill.
+
+One component/assembly has not been checked out, or even investigated, as of December 2025: The current sensors. Probing them is impractical due to
+their size and placement. They introduce 15 mOhms, and, presumably, some capacitance on the line between the drivers and the solenoids.
 
 
-As a reminder, The Problem is that the sensors often do not work, and, secondarily, that the failure mode has been difficult to identify.
-There is noise on the I2C and 3V3 lines, spiking when the coils are demagnetised. I assume it is back-emf from the coils.
 
-The noise sometimes makes the signals cross VIH/VIL thresholds, but for such a short time that even the relatively sensitive I2C bus should be able to handle it. Spikes last for a few tens of nanoseconds.
+### Speculations about FM1
 
-Coil/trace proximity to I2C lines correlates poorly with noise levels. The coil with traces farthest from the I2C lines (X+) seems to produce the most noise.
+No consistent trigger mechanism could be found for FM1, but some observations were made which may strengthen the hypothesis that The Problem is
+ultimately caused by disruptions on the 3V3 plane. In order for the solenoids to work at all, the USB-C must be plugged in before the Teensy.
+This would seem irrelevant when the sensortest script is flashed, as it should not depend on power to the solenoids. Still, FM1 was observed
+more frequently if the USB-C was not plugged in, or plugged in after the Teensy (including resetting the Teensy after USB-C plugin).
+For reference, the USB-C power supply is a Raspberry 5 27W power supply.
 
-When The Problem happens, the Teensy keeps sending data requests without getting an ACK or data back.
+While exploring this, it was discovered that the I2C and 3V3 lines would spike momentarily as the USB-C was plugged in. The event was
+isolated, and discovered to occur the moment the power supply shield meets the shield of the USB-C receptacle on Maggy, irrespective of whether
+the USB-C power lines were physically touching. The spike was measured to approximately 12V, lasting for approximately 700 ns. It was shaped
+like a typical 2nd order RLC response with a period of approximately 40 ns. This response seems to be dependent on the Teensy **not** being
+plugged in: in that case, the spike would last for about 200 ns. Rather than the typical RLC response shape, the voltage then jumps around
+randomly (but not exceeding 12V) before stabilizing at 3.3V. Presumably, the randomness has something to do with the Teensy's internal
+voltage control(ler) trying to stabilize the voltage.
 
-The Problem can happen immediately after power is plugged into the Maggy, in which case the initialisation function actually discovers it and throws an error which I think is related to configuration of the sensor. Notably, in this case The Problem cannot have been triggered by noise from the coils.
+The spike could **not** definitively be connected to FM1. However, it might seem plausible that a 12V spike could damage the sensor, even if it
+only lasts for a few tens of nanoseconds. It does not immediately explain why FM1 happens more frequently if the Teensy is plugged in before the
+USB-C, but it might give a clue about the underlying issue: the sensor is getting fried by instability in the 3V3 line, whether it comes from
+the power supply assemblies or back-emf from the solenoids.
 
-The Problem most commonly happens while the coils are (being) magnetized, presumably somehow triggered by noise. I have not been able to isolate the exact transition point from good sensor output to the sensor hanging.
-
-If bootup is successful, The Problem does not occur so long as the coils are not magnetised; I've had the unit activated and sending data for over an hour uninterrupted.
-
-Bootup is very rarely successful if the Teensy USB is plugged in before the USB-C.
-
-Thus: Noise during operation seems to trigger The Problem, but does not seem to be the full picture.
-
-The currently installed sensor, TLV493D-A1B6, is the cheap consumer version of the first generation of sensors in its family. There are several threads online about it being problematic under certain circumstances that I can't verify, test or mitigate with the software interface/driver I'm using.
-
-Version 2.6 of the Maggy used TLE493D-W1B6, the (slightly more) expensive automotive version of the same sensor without problems.
-
-Conlcusion: I want to buy three of each of TLE..W2B6, TLE..A2B6 and TLI..A2B6. They are the second generation of the same family, with the same footprint/pinout as the current TLV sensor and may be swapped with only minor changes to software. The W2B6 is particularly interesting, as it allows four sensors on the same I2C bus without a mux in between. Highly relevant for MIMO applications we've discussed. It's roughly twice as expensive as the TLV at 1.60$/pc. Noise reduction can and should be implemented as well on the longer term, but a marginally more expensive sensor (in the case of TLI at 0.91$/pc) could be the fast fix we've been looking for.
-
-Additionally, Hans suggested that I look into the current sensors which were introduced in Maggy 4.2. I haven't done that yet. This, as well as power supply strangeness and noise reduction are next on the chopping block after sensor tests.
+We have seen how the 3V3 line is affected by both sources. In the case of back-emf, the sensor experiences over- and undervoltages of as much as
+1.5 V -- far outside of the absolute maximum rating of the sensor of 3.5V. All this to say that a more robust 3V3 assembly might solve The Problem.
